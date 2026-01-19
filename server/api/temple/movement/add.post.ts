@@ -2,19 +2,24 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export default defineEventHandler<{ body: { movementId: number, templeId: number, user: string, town: string, type: string } }>(async (event) => {
-    setResponseHeaders(event, {
-        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
-        "Access-Control-Allow-Origin": "*",
-        'Access-Control-Allow-Credentials': 'true',
-        "Access-Control-Allow-Headers": '*',
-        "Access-Control-Expose-Headers": '*'
-    });
-    
-    if (event.method === 'OPTIONS') {
+export default defineEventHandler(async (event) => {
+    const origin = getHeader(event, "origin") || "";
+
+    // Autoriser tous les mondes Grepolis FR (ex: fr176.grepolis.com)
+    const isGrepolis = /^https:\/\/fr\d+\.grepolis\.com$/i.test(origin);
+
+    if (isGrepolis) {
+        setHeader(event, "Access-Control-Allow-Origin", origin);
+        setHeader(event, "Vary", "Origin");
+        setHeader(event, "Access-Control-Allow-Credentials", "true"); // garde seulement si tu en as besoin
+    }
+
+    setHeader(event, "Access-Control-Allow-Methods", "POST, OPTIONS");
+    setHeader(event, "Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (event.method === "OPTIONS") {
         event.node.res.statusCode = 204;
-        event.node.res.statusMessage = "No Content.";
-        return 'OK';
+        return "";
     }
 
     const body = await readBody(event)
