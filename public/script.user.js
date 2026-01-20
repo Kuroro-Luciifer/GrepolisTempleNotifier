@@ -105,7 +105,7 @@ function loadSettings() {
     settings.send_attack_message = GM_getValue("setting_send_attack_message", true);
     settings.discord_support_hook = GM_getValue("setting_discord_support_hook", "[Discord Webhook URL here]");
     settings.discord_attack_hook = GM_getValue("setting_discord_attack_hook", "[Discord Webhook URL here]");
-    settings.monitor_timeout = GM_getValue("setting_monitor_timeout", 10000);
+    settings.monitor_timeout = GM_getValue("setting_monitor_timeout", 60000);
 }
 
 async function monitor() {
