@@ -122,6 +122,10 @@ async function monitor() {
     }, settings.monitor_timeout + Math.random() * 10000);
 }
 
+function dts(ts) { return ts ? `<t:${ts}:t>` : "?" }
+function dfull(ts) { return ts ? `<t:${ts}:F>` : "?" }
+function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
+
 async function getTempleMovements() {
     const templeCommands = await fetchTempleCommands();
     for (let command of templeCommands) {
@@ -134,31 +138,37 @@ async function getTempleMovements() {
                     command.temple_id,
                     movement.sender_name,
                     movement.origin_town_name,
-                    movement.type
+                    movement.type,
+                    movement.started_at,
+                    movement.arrival_at
                 ).then((data) => {
                     if (!data.success) return;
                     if (settings.send_support_message && movement.type === "support") {
                         sendToDiscord(
                             settings.discord_support_hook,
-                            `Temple **${movement.destination_town_name}** reçoit un soutien de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
+                            `Temple **${movement.destination_town_name}** reçoit un soutien de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
+  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_sea") {
                         sendToDiscord(
                             settings.discord_attack_hook,
-                            `Temple **${movement.destination_town_name}** reçoit une attaque **Naval** de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
+                            `Temple **${movement.destination_town_name}** reçoit une attaque **Naval** de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
+  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_takeover") {
                         sendToDiscord(
                             settings.discord_attack_hook,
-                            `@everyone Temple **${movement.destination_town_name}** reçoit un BC de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
+                            `@everyone Temple **${movement.destination_town_name}** reçoit un BC de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
+  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_land") {
                         sendToDiscord(
                             settings.discord_attack_hook,
-                            `@here Temple **${movement.destination_town_name}** reçoit des UMV de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}** go le colère`
+                            `@here Temple **${movement.destination_town_name}** reçoit des UMV de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}** go le colère` +
+  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                 }).catch((error) => {
@@ -219,15 +229,17 @@ async function fetchTempleCommands() {
         .data.map((item) => item.d);
 }
 
-async function createTempleMovement(movementId, templeId, user, town, type) {
+async function createTempleMovement(movementId, templeId, user, town, type, startedAt, arrivalAt) {
     const url = `${BASE_URL}/api/temple/movement/add`;
 
     const payload = {
-        movementId: movementId,
-        templeId: templeId,
-        user: user,
-        town: town,
-        type: type,
+        movementId,
+        templeId,
+        user,
+        town,
+        type,
+        startedAt,
+        arrivalAt,
     };
 
     const response = await fetch(url, {

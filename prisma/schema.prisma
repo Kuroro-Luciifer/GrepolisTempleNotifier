@@ -18,5 +18,7 @@ model TempleMovement {
     user       String
     town       String
     type       String
+    startedAt Int?
+    arrivalAt Int?
     timestamp  DateTime @default(now())
 }
