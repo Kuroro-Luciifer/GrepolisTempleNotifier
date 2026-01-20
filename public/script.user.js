@@ -147,7 +147,7 @@ async function getTempleMovements() {
                     const times =
                         `\n⏳ **Départ :** ${dts(movement.started_at)}` +
                         `\n🎯 **Arrivée :** ${dts(movement.arrival_at)} ⌛ ${drel(movement.arrival_at)}` +
-                        `\n`;
+                        `\n -----------------------`;
 
                     if (settings.send_support_message && movement.type === "support") {
                         sendToDiscord(
