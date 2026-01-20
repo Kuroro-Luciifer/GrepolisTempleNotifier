@@ -143,35 +143,48 @@ async function getTempleMovements() {
                     movement.arrival_at
                 ).then((data) => {
                     if (!data.success) return;
+
+                    const times =
+                        `\n⏳ **Départ :** ${dts(movement.started_at)}` +
+                        `\n🎯 **Arrivée :** ${dts(movement.arrival_at)} ⌛ ${drel(movement.arrival_at)}`;
+
                     if (settings.send_support_message && movement.type === "support") {
                         sendToDiscord(
-                            settings.discord_support_hook,
-                            `Temple **${movement.destination_town_name}** reçoit un soutien de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+                        settings.discord_support_hook,
+                        `🛡️ **SOUTIEN**\n🏛️ Temple **${movement.destination_town_name}**` +
+                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
+                        times
                         );
                     }
+
                     if (settings.send_attack_message && movement.type === "attack_sea") {
                         sendToDiscord(
-                            settings.discord_attack_hook,
-                            `Temple **${movement.destination_town_name}** reçoit une attaque **Naval** de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+                        settings.discord_attack_hook,
+                        `🌊⚔️ **ATTAQUE NAVALE**\n🏛️ Temple **${movement.destination_town_name}**` +
+                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
+                        times
                         );
                     }
+
                     if (settings.send_attack_message && movement.type === "attack_takeover") {
                         sendToDiscord(
-                            settings.discord_attack_hook,
-                            `@everyone Temple **${movement.destination_town_name}** reçoit un BC de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+                        settings.discord_attack_hook,
+                        `🚩👑 **PRISE DE VILLE (BC)** @everyone\n🏛️ Temple **${movement.destination_town_name}**` +
+                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
+                        times
                         );
                     }
+
                     if (settings.send_attack_message && movement.type === "attack_land") {
                         sendToDiscord(
-                            settings.discord_attack_hook,
-                            `@here Temple **${movement.destination_town_name}** reçoit des UMV de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}** go le colère` +
-  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+                        settings.discord_attack_hook,
+                        `⚔️🔥 **ATTAQUE TERRESTRE (UMV)** @here\n🏛️ Temple **${movement.destination_town_name}**` +
+                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
+                        times +
+                        `\n😡 **Go colère !**`
                         );
                     }
-                }).catch((error) => {
+                    }).catch((error) => {
                     console.warn(error);
                 });
             }
