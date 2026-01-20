@@ -126,6 +126,26 @@ function dts(ts) { return ts ? `<t:${ts}:t>` : "?" }
 function dfull(ts) { return ts ? `<t:${ts}:F>` : "?" }
 function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
 
+function getMyAllianceLabel() {
+  try {
+    const a = uw.Game?.alliance; // selon les mondes ça peut exister
+    if (a?.name) return a.tag ? `[${a.tag}] ${a.name}` : a.name;
+
+    // fallback via player/alliance_id (selon versions)
+    const allianceId = uw.Game?.alliance_id;
+    if (allianceId && uw.MM?.getModelById) {
+      const am = uw.MM.getModelById("Alliance", allianceId);
+      if (am) {
+        const tag = am.get?.("tag");
+        const name = am.get?.("name");
+        if (name) return tag ? `[${tag}] ${name}` : name;
+      }
+    }
+  } catch (_) {}
+  return "Sans alliance";
+}
+
+
 async function getTempleMovements() {
     const templeCommands = await fetchTempleCommands();
     for (let command of templeCommands) {
@@ -144,46 +164,24 @@ async function getTempleMovements() {
                 ).then((data) => {
                     if (!data.success) return;
 
-                    const times =
-                        `\n⏳ **Départ :** ${dts(movement.started_at)}` +
-                        `\n🎯 **Arrivée :** ${dts(movement.arrival_at)} ⌛ ${drel(movement.arrival_at)}` +
-                        `\n -----------------------`;
+                    const ally = getMyAllianceLabel();
+                    const time = `⏳${dts(movement.started_at)} → 🎯${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
+                    const base = `🏛️ ${movement.destination_town_name} • 👤 ${movement.sender_name} • 🏘️ ${movement.origin_town_name} • ${time} • 🤝 ${ally}`;
 
                     if (settings.send_support_message && movement.type === "support") {
-                        sendToDiscord(
-                        settings.discord_support_hook,
-                        `🛡️ **SOUTIEN**\n🏛️ Temple **${movement.destination_town_name}**` +
-                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
-                        times
-                        );
+                        sendToDiscord(settings.discord_support_hook, `🛡️ SOUTIEN • ${base}`);
                     }
 
                     if (settings.send_attack_message && movement.type === "attack_sea") {
-                        sendToDiscord(
-                        settings.discord_attack_hook,
-                        `🌊⚔️ **ATTAQUE NAVALE**\n🏛️ Temple **${movement.destination_town_name}**` +
-                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
-                        times
-                        );
+                        sendToDiscord(settings.discord_attack_hook, `🌊⚔️ NAVAL • ${base}`);
                     }
 
                     if (settings.send_attack_message && movement.type === "attack_takeover") {
-                        sendToDiscord(
-                        settings.discord_attack_hook,
-                        `🚩👑 **PRISE DE VILLE (BC)** @everyone\n🏛️ Temple **${movement.destination_town_name}**` +
-                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
-                        times
-                        );
+                        sendToDiscord(settings.discord_attack_hook, `🚩👑 BC @everyone • ${base}`);
                     }
 
                     if (settings.send_attack_message && movement.type === "attack_land") {
-                        sendToDiscord(
-                        settings.discord_attack_hook,
-                        `⚔️🔥 **ATTAQUE TERRESTRE (UMV)** @here\n🏛️ Temple **${movement.destination_town_name}**` +
-                        `\n👤 **${movement.sender_name}** → 🏘️ **${movement.origin_town_name}**` +
-                        times +
-                        `\n😡 **Go colère !**`
-                        );
+                        sendToDiscord(settings.discord_attack_hook, `⚔️🔥 UMV @here • ${base}`);
                     }
                     }).catch((error) => {
                     console.warn(error);
