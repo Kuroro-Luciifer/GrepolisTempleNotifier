@@ -147,28 +147,28 @@ async function getTempleMovements() {
                         sendToDiscord(
                             settings.discord_support_hook,
                             `Temple **${movement.destination_town_name}** reçoit un soutien de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_sea") {
                         sendToDiscord(
                             settings.discord_attack_hook,
                             `Temple **${movement.destination_town_name}** reçoit une attaque **Naval** de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_takeover") {
                         sendToDiscord(
                             settings.discord_attack_hook,
                             `@everyone Temple **${movement.destination_town_name}** reçoit un BC de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**` +
-  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                     if (settings.send_attack_message && movement.type === "attack_land") {
                         sendToDiscord(
                             settings.discord_attack_hook,
                             `@here Temple **${movement.destination_town_name}** reçoit des UMV de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}** go le colère` +
-  `Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
+  ` Départ: ${dts(movement.started_at)} | Arrivée: ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`
                         );
                     }
                 }).catch((error) => {
