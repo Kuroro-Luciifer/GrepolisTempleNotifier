@@ -140,13 +140,25 @@ async function getTempleMovements() {
                     if (settings.send_support_message && movement.type === "support") {
                         sendToDiscord(
                             settings.discord_support_hook,
-                            `Temple **${movement.destination_town_name}** has received support from **${movement.sender_name}** in town **${movement.origin_town_name}**`
+                            `Temple **${movement.destination_town_name}** reçoit un soutien de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
                         );
                     }
-                    if (settings.send_attack_message && movement.type.includes("attack")) {
+                    if (settings.send_attack_message && movement.type === "attack_sea") {
                         sendToDiscord(
                             settings.discord_attack_hook,
-                            `Temple **${movement.destination_town_name}** has received attack from **${movement.sender_name}** in town **${movement.origin_town_name}**`
+                            `Temple **${movement.destination_town_name}** reçoit une attaque **Naval** de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
+                        );
+                    }
+                    if (settings.send_attack_message && movement.type === "attack_takeover") {
+                        sendToDiscord(
+                            settings.discord_attack_hook,
+                            `@everyone Temple **${movement.destination_town_name}** reçoit un BC de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}**`
+                        );
+                    }
+                    if (settings.send_attack_message && movement.type === "attack_land") {
+                        sendToDiscord(
+                            settings.discord_attack_hook,
+                            `@here Temple **${movement.destination_town_name}** reçoit des UMV de **${movement.sender_name}** depuis la ville **${movement.origin_town_name}** go le colère`
                         );
                     }
                 }).catch((error) => {
