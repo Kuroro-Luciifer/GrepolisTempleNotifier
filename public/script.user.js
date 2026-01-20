@@ -31,8 +31,8 @@ const BASE_URL = "https://grepolis-temple-notifier-six.vercel.app";
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "https://discord.com/api/webhooks/1463164065592643704/t6PJdAfoddha7MH6NVXoBF8FTk62vMWPXklb4mEyjJ9VRr1n9L8IwbSQ3fZSxPbwsPXc",
-    discord_attack_hook: "https://discord.com/api/webhooks/1462945528525623449/OvxWvGtia8bGvFTRG5eypsRVv6m6UVdbhQSsyAZ0kq8KN1FNCCR6RDoCzvFKLbgfKrBg",
+    discord_support_hook: "https://discord.com/api/webhooks/1463190102686695425/gWvOqP_rmcMQt-pMBkJuuuqF_NylOVWwDKASyTUu4hvuLeOLHirFUemH_kKRL42G55gV",
+    discord_attack_hook: "https://discord.com/api/webhooks/1463164065592643704/t6PJdAfoddha7MH6NVXoBF8FTk62vMWPXklb4mEyjJ9VRr1n9L8IwbSQ3fZSxPbwsPXc",
     monitor_timeout: 60000,
 };
 
