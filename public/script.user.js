@@ -126,26 +126,6 @@ function dts(ts) { return ts ? `<t:${ts}:t>` : "?" }
 function dfull(ts) { return ts ? `<t:${ts}:F>` : "?" }
 function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
 
-function getMyAllianceLabel() {
-  try {
-    const a = uw.Game?.alliance; // selon les mondes ça peut exister
-    if (a?.name) return a.tag ? `[${a.tag}] ${a.name}` : a.name;
-
-    // fallback via player/alliance_id (selon versions)
-    const allianceId = uw.Game?.alliance_id;
-    if (allianceId && uw.MM?.getModelById) {
-      const am = uw.MM.getModelById("Alliance", allianceId);
-      if (am) {
-        const tag = am.get?.("tag");
-        const name = am.get?.("name");
-        if (name) return tag ? `[${tag}] ${name}` : name;
-      }
-    }
-  } catch (_) {}
-  return "Sans alliance";
-}
-
-
 async function getTempleMovements() {
     const templeCommands = await fetchTempleCommands();
     for (let command of templeCommands) {
@@ -164,9 +144,8 @@ async function getTempleMovements() {
                 ).then((data) => {
                     if (!data.success) return;
 
-                    const ally = getMyAllianceLabel();
                     const time = `⏳${dts(movement.started_at)} → 🎯${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
-                    const base = `🏛️ ${movement.destination_town_name} • 👤 ${movement.sender_name} • 🏘️ ${movement.origin_town_name} • ${time} • 🤝 ${ally}`;
+                    const base = `🏛️ ${movement.destination_town_name} • 👤 ${movement.sender_name} • 🏘️ ${movement.origin_town_name} • ${time}`;
 
                     if (settings.send_support_message && movement.type === "support") {
                         sendToDiscord(settings.discord_support_hook, `🛡️ SOUTIEN • ${base}`);
