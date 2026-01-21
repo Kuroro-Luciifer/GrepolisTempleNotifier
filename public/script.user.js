@@ -52,6 +52,28 @@ const language = {
 };
 // ======================================
 
+/*******************************************************************************************************************************
+ * ALLIANCE MAPPING (EN DUR)
+ *******************************************************************************************************************************/
+
+const ALLIANCE_LABEL_BY_ID = {
+    239: "[REPROD] LES PANARDS DE KAPRE",
+    19: "[OFF TER] LES PETONS DE UKNOW",
+    335: "[OFF NAV] LES RIPATONS DE POPPY",
+    595: "[DEF] LES FODDERS D'OMBRINETTE",
+    594: "[PORTAIL] LES TROADS DE TARA",
+    690: "[RES] LES PIEDS DE MILO"
+};
+
+function getAllianceLabelHardcoded(id) {
+    if (!id) return "Sans alliance";
+    return ALLIANCE_LABEL_BY_ID[id] || `Alliance #${id}`;
+}
+
+/*******************************************************************************************************************************
+ * Main
+ *******************************************************************************************************************************/
+
 (function () {
     "use strict";
     console.log(
@@ -110,6 +132,7 @@ function loadSettings() {
 
 async function monitor() {
     console.log("Monitoring Temples");
+    console.log("[GTN] tick", new Date().toLocaleTimeString(), "townId=", uw.Game?.townId);
 
     try {
         await getTempleMovements();
@@ -128,44 +151,56 @@ function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
 
 async function getTempleMovements() {
     const templeCommands = await fetchTempleCommands();
+
     for (let command of templeCommands) {
-        if (command.count_supports > 0 || command.count_attacks > 0) {
-            const templeData = await fetchTempleData(command.temple_id);
-            console.log(templeData);
-            for (let movement of templeData.movements) {
-                createTempleMovement(
-                    movement.id,
-                    command.temple_id,
-                    movement.sender_name,
-                    movement.origin_town_name,
-                    movement.type,
-                    movement.started_at,
-                    movement.arrival_at
-                ).then((data) => {
+        if (command.count_supports <= 0 && command.count_attacks <= 0) continue;
+
+        const templeData = await fetchTempleData(command.temple_id);
+
+        for (let movement of templeData.movements) {
+            createTempleMovement(
+                movement.id,
+                command.temple_id,
+                movement.sender_name,
+                movement.origin_town_name,
+                movement.type,
+                movement.started_at,
+                movement.arrival_at
+            )
+                .then((data) => {
                     if (!data.success) return;
 
-                    const time = `⏳${dts(movement.started_at)} → 🎯${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
-                    const base = `🏛️ ${movement.destination_town_name} • 👤 ${movement.sender_name} • 🏘️ ${movement.origin_town_name} • ${time}`;
+                    const typeLabel =
+                        movement.type === "support" ? "**SOUTIEN**" :
+                            movement.type === "attack_sea" ? "**NAVAL**" :
+                                movement.type === "attack_takeover" ? "**BC**" :
+                                    movement.type === "attack_land" ? "**UMV**" :
+                                        "MOUVEMENT";
 
-                    if (settings.send_support_message && movement.type === "support") {
-                        sendToDiscord(settings.discord_support_hook, `🛡️ SOUTIEN • ${base}`);
-                    }
+                    const ping =
+                        movement.type === "attack_takeover" ? "⚠️ @everyone " :
+                            movement.type === "attack_land" ? "@here " : "";
 
-                    if (settings.send_attack_message && movement.type === "attack_sea") {
-                        sendToDiscord(settings.discord_attack_hook, `🌊⚔️ NAVAL • ${base}`);
-                    }
+                    const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
 
-                    if (settings.send_attack_message && movement.type === "attack_takeover") {
-                        sendToDiscord(settings.discord_attack_hook, `🚩👑 BC @everyone • ${base}`);
-                    }
+                    const line1 = `${ping}${typeLabel} • 🏛️ ${movement.destination_town_name} • 🦶 **${allyLabel}**`;
+                    const line2 = `👤 ${movement.sender_name} • 📍 ${movement.origin_town_name}`;
+                    const line3 = `⏳ ${dts(movement.started_at)} → 🎯 ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
 
-                    if (settings.send_attack_message && movement.type === "attack_land") {
-                        sendToDiscord(settings.discord_attack_hook, `⚔️🔥 UMV @here • ${base}`);
-                    }
-                    }).catch((error) => {
+                    // Support vs Attack webhook
+                    const hook =
+                        movement.type === "support"
+                            ? settings.discord_support_hook
+                            : settings.discord_attack_hook;
+
+                    if (movement.type === "support" && !settings.send_support_message) return;
+                    if (movement.type !== "support" && !settings.send_attack_message) return;
+
+                    sendToDiscord(hook, `${line1}\n${line2}\n${line3}`);
+                })
+                .catch((error) => {
                     console.warn(error);
                 });
-            }
         }
     }
 }
@@ -266,8 +301,6 @@ async function sendToDiscord(webhookUrl, message) {
 
     return await response.json();
 }
-
-
 
 function createSettingsWindow() {
     var windowExists = false;
@@ -371,10 +404,6 @@ function createSettingsWindow() {
     html.appendChild(body);
     frame.appendChild(html);
 
-    // $(".gtncheckbox").click(function () {
-    //     swapCheckboxValue(this);
-    // });
-
     $('.gtncheckbox').on('click', function () {
         swapCheckboxValue(this);
     });
@@ -388,17 +417,6 @@ function createSettingsWindow() {
     });
 
     addMeta("GTNSettings", "ready", "true");
-
-    // $("#settings_reload").click(function(){
-    //     GM_setValue('setting_inactiveMin', $('#setting_inactiveMin').val());
-    //     GM_setValue('setting_inactiveMax', $('#setting_inactiveMax').val());
-    //     GM_setValue('setting_discordhook' + UWGame.world_id, $('#setting_discordhook').val());
-    //     if($('#setting_token').val() == "") { GM_setValue('setting_token' + UWGame.world_id, null) }
-    //     else if($('#setting_token').val().length == 32){GM_setValue('setting_token' + UWGame.world_id, $('#setting_token').val()) }
-    //     if($('#setting_key').val() == "") { GM_setValue('setting_key' + UWGame.world_id, null) }
-    //     else if($('#setting_key').val().length == 8){GM_setValue('setting_key' + UWGame.world_id, $('#setting_key').val()) }
-    //     window.location.reload();
-    // });
 }
 
 function addMeta(metaName, attributeName, value) {
