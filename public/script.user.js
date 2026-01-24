@@ -31,8 +31,8 @@ const BASE_URL = "https://grepolis-temple-notifier-six.vercel.app";
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "",
-    discord_attack_hook: "",
+    discord_support_hook: "[",
+    discord_attack_hook: "[DISCORD HOOK]",
     monitor_timeout: 60000,
 };
 
@@ -53,16 +53,11 @@ const language = {
 // ======================================
 
 /*******************************************************************************************************************************
- * ALLIANCE MAPPING (EN DUR)
+ * ALLIANCE MAPPING
  *******************************************************************************************************************************/
 
 const ALLIANCE_LABEL_BY_ID = {
-    239: "[REPROD] LES PANARDS DE KAPRE",
-    19: "[OFF TER] LES PETONS DE UKNOW",
-    335: "[OFF NAV] LES RIPATONS DE POPPY",
-    595: "[DEF] LES FODDERS D'OMBRINETTE",
-    594: "[PORTAIL] LES TROADS DE TARA",
-    690: "[RES] LES PIEDS DE MILO"
+    // 1 : "[REPROD] Alliance",
 };
 
 function getAllianceLabelHardcoded(id) {
@@ -92,7 +87,6 @@ function getAllianceLabelHardcoded(id) {
     addSettingsButton();
     loadSettings();
 
-    // delayed start for monitoring
     setTimeout(() => {
         monitor();
     }, 1000);
@@ -100,7 +94,6 @@ function getAllianceLabelHardcoded(id) {
 
 function addSettingsButton() {
     if (document.getElementById("GTNSettingsButton") == null) {
-        //if button not found
         var button = document.createElement("div");
         button.id = "GTNSettingsButton";
         button.className = "btn_settings circle_button";
@@ -117,7 +110,6 @@ function addSettingsButton() {
         button.appendChild(img);
         document.getElementById("ui_box").appendChild(button);
 
-        // Add open settings menu event
         $("#GTNSettingsButton").click(createSettingsWindow);
     }
 }
@@ -130,80 +122,93 @@ function loadSettings() {
     settings.monitor_timeout = GM_getValue("setting_monitor_timeout", 10000);
 }
 
+let isScanning = false;
+
 async function monitor() {
-    console.log("Monitoring Temples");
-    console.log("[GTN] tick", new Date().toLocaleTimeString(), "townId=", uw.Game?.townId);
+  const base = Number(settings.monitor_timeout) || 10000;
+  setTimeout(monitor, base + Math.random() * 10000);
 
-    try {
-        await getTempleMovements();
-    } catch (error) {
-        console.error(error);
-    }
+  if (isScanning) {
+    console.log("[GTN] skip tick (scan still running)");
+    return;
+  }
 
-    setTimeout(function () {
-        monitor();
-    }, settings.monitor_timeout + Math.random() * 10000);
+  isScanning = true;
+  console.log("[GTN] tick", new Date().toLocaleTimeString(), "townId=", uw.Game?.townId);
+
+  try {
+    await getTempleMovements();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isScanning = false;
+  }
 }
+
 
 function dts(ts) { return ts ? `<t:${ts}:t>` : "?" }
 function dfull(ts) { return ts ? `<t:${ts}:F>` : "?" }
 function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
 
 async function getTempleMovements() {
-    const templeCommands = await fetchTempleCommands();
+  const templeCommands = await fetchTempleCommands();
+  console.log("[GTN] templeCommands:", templeCommands?.length);
 
-    for (let command of templeCommands) {
-        if (command.count_supports <= 0 && command.count_attacks <= 0) continue;
+  for (const command of templeCommands) {
+    if (command.count_supports <= 0 && command.count_attacks <= 0) continue;
 
-        const templeData = await fetchTempleData(command.temple_id);
+    const templeData = await fetchTempleData(command.temple_id);
+    const movements = templeData?.movements || [];
+    console.log(`[GTN] temple ${command.temple_id} movements:`, movements.length);
 
-        for (let movement of templeData.movements) {
-            createTempleMovement(
-                movement.id,
-                command.temple_id,
-                movement.sender_name,
-                movement.origin_town_name,
-                movement.type,
-                movement.started_at,
-                movement.arrival_at
-            )
-                .then((data) => {
-                    if (!data.success) return;
+    for (const movement of movements) {
+      try {
+        const data = await createTempleMovement(
+          movement.id,
+          command.temple_id,
+          movement.sender_name,
+          movement.origin_town_name,
+          movement.type,
+          movement.started_at,
+          movement.arrival_at
+        );
 
-                    const typeLabel =
-                        movement.type === "support" ? "**SOUTIEN**" :
-                            movement.type === "attack_sea" ? "**NAVAL**" :
-                                movement.type === "attack_takeover" ? "**BC**" :
-                                    movement.type === "attack_land" ? "**UMV**" :
-                                        "MOUVEMENT";
+        if (!data?.success) continue;
 
-                    const ping =
-                        movement.type === "attack_takeover" ? "⚠️ @everyone " :
-                            movement.type === "attack_land" ? "@here " : "";
+        const typeLabel =
+          movement.type === "support" ? "**SOUTIEN**" :
+          movement.type === "attack_sea" ? "**NAVAL**" :
+          movement.type === "attack_takeover" ? "**BC**" :
+          movement.type === "attack_land" ? "**UMV**" :
+          "MOUVEMENT";
 
-                    const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
+        const ping =
+          movement.type === "attack_takeover" ? "⚠️ @everyone " :
+          movement.type === "attack_land" ? "@here " : "";
 
-                    const line1 = `${ping}${typeLabel} • 🏛️ ${movement.destination_town_name} • 🦶 **${allyLabel}**`;
-                    const line2 = `👤 ${movement.sender_name} • 📍 ${movement.origin_town_name}`;
-                    const line3 = `⏳ ${dts(movement.started_at)} → 🎯 ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
+        const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
 
-                    // Support vs Attack webhook
-                    const hook =
-                        movement.type === "support"
-                            ? settings.discord_support_hook
-                            : settings.discord_attack_hook;
+        const line1 = `${ping}${typeLabel} • 🏛️ ${movement.destination_town_name} [temple]${command.temple_id}[/temple] • **${allyLabel}**`;
+        const line2 = `👤 ${movement.sender_name} • 📍 ${movement.origin_town_name}`;
+        const line3 = `⏳ ${dts(movement.started_at)} → 🎯 ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
 
-                    if (movement.type === "support" && !settings.send_support_message) return;
-                    if (movement.type !== "support" && !settings.send_attack_message) return;
+        const hook = movement.type === "support"
+          ? settings.discord_support_hook
+          : settings.discord_attack_hook;
 
-                    sendToDiscord(hook, `${line1}\n${line2}\n${line3}`);
-                })
-                .catch((error) => {
-                    console.warn(error);
-                });
-        }
+        if (movement.type === "support" && !settings.send_support_message) continue;
+        if (movement.type !== "support" && !settings.send_attack_message) continue;
+
+        await sendToDiscord(hook, `${line1}\n${line2}\n${line3}`);
+      } catch (e) {
+        console.warn("[GTN] movement error", e);
+      }
     }
+  }
+
+  console.log("[GTN] scan finished ✅");
 }
+
 
 async function fetchTempleData(templeId) {
     const payload = {
