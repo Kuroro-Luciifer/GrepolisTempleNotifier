@@ -31,7 +31,7 @@ const BASE_URL = "https://grepolis-temple-notifier-six.vercel.app";
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "[",
+    discord_support_hook: "[DISCORD_HOOK]",
     discord_attack_hook: "[DISCORD HOOK]",
     monitor_timeout: 60000,
 };
@@ -57,7 +57,7 @@ const language = {
  *******************************************************************************************************************************/
 
 const ALLIANCE_LABEL_BY_ID = {
-    // 1 : "[REPROD] Alliance",
+    // id_alliance (console navigateur : uw.Game.alliance_id) : "[REPROD] Alliance",
 };
 
 function getAllianceLabelHardcoded(id) {
