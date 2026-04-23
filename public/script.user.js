@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Grepolis Temple Notifier
 // @namespace    http://tampermonkey.net/
-// @version      2024.0.4
+// @version      2025.1.1
 // @description  Monitors the incoming support and attacks on temples
 // @author       Jos
 // @match        http://*.grepolis.com/game/*
@@ -9,9 +9,9 @@
 // @exclude      view-source://*
 // @exclude      https://classic.grepolis.com/game/*
 // @icon         https://cdn-icons-png.flaticon.com/512/3874/3874511.png
-// @updateURL    https://grepolis-temple-notifier.vercel.app/script.meta.js
-// @downloadURL  https://grepolis-temple-notifier.vercel.app/script.user.js
-// @homepage     https://grepolis-temple-notifier.vercel.app
+// @updateURL    https://kuroros-projects.vercel.app/script.meta.js
+// @downloadURL  https://kuroros-projects.vercel.app/script.user.js
+// @homepage     https://kuroros-projects.vercel.app
 // @grant		 GM_getValue
 // @grant		 GM_setValue
 // @grant        unsafeWindow
@@ -25,15 +25,15 @@
 var uw = unsafeWindow || window;
 var $ = uw.jQuery;
 
-const BASE_URL = "[Vercel URL]";
+const BASE_URL = "https://kuroros-projects.vercel.app";
 
 // ======================================
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "[DISCORD_HOOK]",
-    discord_attack_hook: "[DISCORD HOOK]",
-    monitor_timeout: 60000,
+    discord_support_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
+    discord_attack_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
+    monitor_timeout: 600000,
 };
 
 const language = {
@@ -44,7 +44,7 @@ const language = {
         send_attack_message: "Send attack message to Discord",
         discord_support_hook: "Discord webhook URL for support messages",
         discord_attack_hook: "Discord webhook URL for attack messages",
-        monitor_timeout: "Timeout in milliseconds for checking for new movements",
+        monitor_timeout: "Intervalle de scan en millisecondes (min 30000 = 30s)",
         save_reload: "Save and reload",
         credits:
             "Made by Jos, please contact me with suggestions or bugs and to add support for your language.",
@@ -57,13 +57,135 @@ const language = {
  *******************************************************************************************************************************/
 
 const ALLIANCE_LABEL_BY_ID = {
-    // id_alliance (console navigateur : uw.Game.alliance_id) : "[REPROD] Alliance",
+    239: "[REPROD] LES PANARDS DE KAPRE",
+    19: "[OFF TER] LES PETONS DE UKNOW",
+    335: "[OFF NAV] LES RIPATONS DE POPPY",
+    595: "[DEF] LES FODDERS D'OMBRINETTE",
+    594: "[PORTAIL] LES TROADS DE TARA",
+    690: "[RES] LES PIEDS DE MILO"
 };
 
 function getAllianceLabelHardcoded(id) {
     if (!id) return "Sans alliance";
     return ALLIANCE_LABEL_BY_ID[id] || `Alliance #${id}`;
 }
+
+const HOOKS_BY_ALLIANCE_ID = {
+    239: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
+    },
+    19: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679685458759866/LzO8Q77t97hd70MyW4I8_1BcndyfE1G8-W185k00lLSfOXLAiYjSAlgiF5AjLGNKZN6S",
+    },
+    335: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679710067003494/T0SzapfhCTUtLstRTZ99L0YLMszxE-yQcKDdKgMBl9rffvW7aHkR-97APvvOzzSe78m2",
+    },
+    595: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679728844767456/WqfWP6oKLVUpigTc-FnOGeM1EIXjEkfnwJhaqY5ZBUBMBT5S67Jm1hmZphYgYbC7p_m1",
+    },
+    594: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679747954151639/gkvEIy77oLwqJW86RHKUe8O_cQi8pOLMN1ht2bxvsAOp5yVm6UgjyZglvmNsi9KZW30_",
+    },
+    690: {
+        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+        attack:  "https://discord.com/api/webhooks/1464679767365255274/zZ3lCZtF9PXIHY_oUKyHeG5if4wXwX1Cojcnb-YXfzk3IVbkQKWSaQ2n-31rB0OY6nV3",
+    }
+};
+
+const DEFAULT_HOOKS = {
+    support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+    attack:  "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+};
+
+function getHooksForCurrentAlliance() {
+    const allianceId = uw.Game?.alliance_id;
+    return HOOKS_BY_ALLIANCE_ID[allianceId] || DEFAULT_HOOKS;
+}
+
+/*******************************************************************************************************************************
+ * Client-side movement cache — évite les appels Vercel redondants
+ * TTL 24h, nettoyage automatique, max 1000 entrées
+ *******************************************************************************************************************************/
+
+const SEEN_TTL_SECONDS = 24 * 60 * 60;
+
+function _loadSeenCache() {
+    try {
+        return JSON.parse(GM_getValue("gtn_seen_movements", "{}"));
+    } catch {
+        return {};
+    }
+}
+
+function isMovementSeen(movementId) {
+    const cache = _loadSeenCache();
+    const ts = cache[String(movementId)];
+    if (!ts) return false;
+    return (Date.now() / 1000) - ts < SEEN_TTL_SECONDS;
+}
+
+function markMovementSeen(movementId) {
+    const cache = _loadSeenCache();
+    const now = Math.floor(Date.now() / 1000);
+    cache[String(movementId)] = now;
+
+    // Purge des entrées expirées
+    for (const id of Object.keys(cache)) {
+        if (now - cache[id] >= SEEN_TTL_SECONDS) delete cache[id];
+    }
+
+    // Garde les 1000 plus récents si le cache déborde
+    const keys = Object.keys(cache);
+    if (keys.length > 1000) {
+        keys.sort((a, b) => cache[a] - cache[b]);
+        for (const id of keys.slice(0, keys.length - 1000)) delete cache[id];
+    }
+
+    GM_setValue("gtn_seen_movements", JSON.stringify(cache));
+}
+
+/*******************************************************************************************************************************
+ * Détection alliance via ITowns uniquement (pas d'appel API asynchrone)
+ * Retourne l'alliance_id de la ville d'origine si disponible dans la carte, sinon null.
+ *******************************************************************************************************************************/
+
+function getSenderAllianceIdFromMap(townId) {
+    if (!townId || !uw.ITowns) return null;
+    try {
+        const town = typeof uw.ITowns.get === 'function'
+            ? uw.ITowns.get(townId)
+            : uw.ITowns[townId];
+        if (!town) return null;
+        return (typeof town.get === 'function' ? town.get('alliance_id') : town.alliance_id) ?? null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Debug helpers — accessibles via GTN.xxx() dans la console du navigateur
+unsafeWindow.GTN = {
+    cache:       () => JSON.parse(GM_getValue("gtn_seen_movements", "{}")),
+    clearCache:  () => { GM_setValue("gtn_seen_movements", "{}"); console.log("[GTN] cache vidé"); },
+    forceExpire: (id) => {
+        const c = JSON.parse(GM_getValue("gtn_seen_movements", "{}"));
+        if (id) { c[String(id)] = 1; }
+        else { for (const k of Object.keys(c)) c[k] = 1; }
+        GM_setValue("gtn_seen_movements", JSON.stringify(c));
+        console.log("[GTN] expiré :", id || "tous");
+    },
+    forceScan:   async () => {
+        if (isScanning) { console.log("[GTN] scan déjà en cours"); return; }
+        isScanning = true;
+        try { await getTempleMovements(); } catch(e) { console.error(e); } finally { isScanning = false; }
+    },
+    settings:    () => settings,
+};
+console.log("[GTN] GTN helpers dispo → GTN.cache() / GTN.clearCache() / GTN.forceExpire(id) / GTN.forceScan() / GTN.settings()");
 
 /*******************************************************************************************************************************
  * Main
@@ -115,100 +237,185 @@ function addSettingsButton() {
 }
 
 function loadSettings() {
-    settings.send_support_message = GM_getValue("setting_send_support_message", false);
-    settings.send_attack_message = GM_getValue("setting_send_attack_message", true);
-    settings.discord_support_hook = GM_getValue("setting_discord_support_hook", "[Discord Webhook URL here]");
-    settings.discord_attack_hook = GM_getValue("setting_discord_attack_hook", "[Discord Webhook URL here]");
-    settings.monitor_timeout = GM_getValue("setting_monitor_timeout", 10000);
+    settings.send_support_message = GM_getValue("setting_send_support_message", settings.send_support_message);
+    settings.send_attack_message = GM_getValue("setting_send_attack_message", settings.send_attack_message);
+    settings.discord_support_hook = GM_getValue("setting_discord_support_hook", settings.discord_support_hook);
+    settings.discord_attack_hook = GM_getValue("setting_discord_attack_hook", settings.discord_attack_hook);
+
+    const mt = GM_getValue("setting_monitor_timeout", settings.monitor_timeout);
+    settings.monitor_timeout = Number(mt);
+
+    if (!Number.isFinite(settings.monitor_timeout) || settings.monitor_timeout < 30000) {
+        settings.monitor_timeout = 30000;
+    }
 }
 
 let isScanning = false;
+let monitorTimer = null;
 
 async function monitor() {
-  const base = Number(settings.monitor_timeout) || 10000;
-  setTimeout(monitor, base + Math.random() * 10000);
+    const base = Number(settings.monitor_timeout) || 60000;
+    if (monitorTimer) clearTimeout(monitorTimer);
+    monitorTimer = setTimeout(monitor, base + Math.random() * 5000);
 
-  if (isScanning) {
-    console.log("[GTN] skip tick (scan still running)");
-    return;
-  }
+    if (isScanning) {
+        console.log("[GTN] skip tick (scan still running)");
+        return;
+    }
 
-  isScanning = true;
-  console.log("[GTN] tick", new Date().toLocaleTimeString(), "townId=", uw.Game?.townId);
+    if (!window.location.hostname.includes("fr176")) {
+        console.log("[GTN] serveur non supporté :", window.location.hostname, "→ skip");
+        return;
+    }
 
-  try {
-    await getTempleMovements();
-  } catch (error) {
-    console.error(error);
-  } finally {
-    isScanning = false;
-  }
+    isScanning = true;
+    console.log("[GTN] tick", new Date().toLocaleTimeString(), "townId=", uw.Game?.townId);
+
+    try {
+        await getTempleMovements();
+    } catch (error) {
+        console.error("[GTN] monitor error:", error);
+    } finally {
+        isScanning = false;
+    }
 }
 
-
-function dts(ts) { return ts ? `<t:${ts}:t>` : "?" }
-function dfull(ts) { return ts ? `<t:${ts}:F>` : "?" }
-function drel(ts) { return ts ? `<t:${ts}:R>` : "?" }
+function dts(ts) { return ts ? `<t:${ts}:t>` : "?"; }
+function drel(ts) { return ts ? `<t:${ts}:R>` : "?"; }
 
 async function getTempleMovements() {
-  const templeCommands = await fetchTempleCommands();
-  console.log("[GTN] templeCommands:", templeCommands?.length);
+    const templeCommands = await fetchTempleCommands();
 
-  for (const command of templeCommands) {
-    if (command.count_supports <= 0 && command.count_attacks <= 0) continue;
+    const activeTemples = templeCommands.filter(
+        c => c.count_supports > 0 || c.count_attacks > 0
+    );
 
-    const templeData = await fetchTempleData(command.temple_id);
-    const movements = templeData?.movements || [];
-    console.log(`[GTN] temple ${command.temple_id} movements:`, movements.length);
-
-    for (const movement of movements) {
-      try {
-        const data = await createTempleMovement(
-          movement.id,
-          command.temple_id,
-          movement.sender_name,
-          movement.origin_town_name,
-          movement.type,
-          movement.started_at,
-          movement.arrival_at
-        );
-
-        if (!data?.success) continue;
-
-        const typeLabel =
-          movement.type === "support" ? "**SOUTIEN**" :
-          movement.type === "attack_sea" ? "**NAVAL**" :
-          movement.type === "attack_takeover" ? "**BC**" :
-          movement.type === "attack_land" ? "**UMV**" :
-          "MOUVEMENT";
-
-        const ping =
-          movement.type === "attack_takeover" ? "⚠️ @everyone " :
-          movement.type === "attack_land" ? "@here " : "";
-
-        const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
-
-        const line1 = `${ping}${typeLabel} • 🏛️ ${movement.destination_town_name} [temple]${command.temple_id}[/temple] • **${allyLabel}**`;
-        const line2 = `👤 ${movement.sender_name} • 📍 ${movement.origin_town_name}`;
-        const line3 = `⏳ ${dts(movement.started_at)} → 🎯 ${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`;
-
-        const hook = movement.type === "support"
-          ? settings.discord_support_hook
-          : settings.discord_attack_hook;
-
-        if (movement.type === "support" && !settings.send_support_message) continue;
-        if (movement.type !== "support" && !settings.send_attack_message) continue;
-
-        await sendToDiscord(hook, `${line1}\n${line2}\n${line3}`);
-      } catch (e) {
-        console.warn("[GTN] movement error", e);
-      }
+    if (activeTemples.length === 0) {
+        console.log("[GTN] no active temples, scan finished ✅");
+        return;
     }
-  }
 
-  console.log("[GTN] scan finished ✅");
+    // Fetch toutes les données de temples en parallèle
+    const templeDataList = await Promise.all(
+        activeTemples.map(cmd => fetchTempleData(cmd.temple_id))
+    );
+
+    console.log(`[GTN] ${activeTemples.length} temples actifs fetchés`);
+
+    const hooks = getHooksForCurrentAlliance();
+    const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
+
+    for (let i = 0; i < activeTemples.length; i++) {
+        const command = activeTemples[i];
+        const movements = templeDataList[i]?.movements || [];
+
+        for (const movement of movements) {
+            // Cache local : évite l'appel Vercel si déjà traité
+            if (isMovementSeen(movement.id)) continue;
+
+            console.log(`[GTN] nouveau mvt ${movement.id} | type=${movement.type} | sender=${movement.sender_name}`);
+
+            // Filtre attaques alliées : skip si la ville d'origine est connue et alliée (données map uniquement)
+            const ATTACK_TYPES = ["attack_sea", "attack_land", "attack_takeover"];
+            if (ATTACK_TYPES.includes(movement.type) && movement.origin_town_id) {
+                const senderAllianceId = getSenderAllianceIdFromMap(movement.origin_town_id);
+                if (senderAllianceId && ALLIANCE_LABEL_BY_ID[senderAllianceId]) {
+                    markMovementSeen(movement.id);
+                    console.log(`[GTN] skip attaque alliée — ${movement.sender_name} (${ALLIANCE_LABEL_BY_ID[senderAllianceId]})`);
+                    continue;
+                }
+            }
+
+            if (movement.type === "support" && !settings.send_support_message) {
+                markMovementSeen(movement.id);
+                continue;
+            }
+            if (movement.type !== "support" && !settings.send_attack_message) {
+                markMovementSeen(movement.id);
+                continue;
+            }
+
+            try {
+                console.log(`[GTN] → Vercel mvt ${movement.id}`);
+                const data = await createTempleMovement(
+                    movement.id,
+                    command.temple_id,
+                    movement.sender_name,
+                    movement.origin_town_name,
+                    movement.type,
+                    movement.started_at,
+                    movement.arrival_at
+                );
+
+                console.log(`[GTN] ← Vercel mvt ${movement.id} success=${data?.success}`);
+                // Marquer comme vu côté client même si Vercel dit "déjà connu"
+                markMovementSeen(movement.id);
+
+                if (!data?.success) continue;
+
+                const typeLabel =
+                    movement.type === "support"         ? "SOUTIEN" :
+                        movement.type === "attack_sea"      ? "OFF NAV" :
+                            movement.type === "attack_takeover" ? "BC" :
+                                movement.type === "attack_land"     ? "UMV" :
+                                    "MOUVEMENT";
+
+                const typeEmoji =
+                    movement.type === "support"         ? "🛡️" :
+                        movement.type === "attack_sea"      ? "⚓" :
+                            movement.type === "attack_takeover" ? "👑" :
+                                movement.type === "attack_land"     ? "⚔️" :
+                                    "🔵";
+
+                const color =
+                    movement.type === "support"         ? 0x2ECC71 :  // vert
+                        movement.type === "attack_takeover" ? 0xE74C3C :  // rouge vif
+                            movement.type === "attack_land"     ? 0xE67E22 :  // orange
+                                movement.type === "attack_sea"      ? 0x3498DB :  // bleu
+                                    0x95A5A6;
+
+                const ping =
+                    movement.type === "attack_takeover" ? "@everyone" :
+                        movement.type === "attack_land"     ? "@here" : null;
+
+                const embed = {
+                    title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name}`,
+                    color: color,
+                    fields: [
+                        { name: "🏛️ Temple",    value: `[temple]${command.temple_id}[/temple]`,  inline: true },
+                        { name: "🦶 Alliance",  value: allyLabel,                                 inline: true },
+                        { name: "\u200b",        value: "\u200b",                                  inline: true },
+                        { name: "👤 Joueur",    value: movement.sender_name,                      inline: true },
+                        { name: "📍 Origine",   value: movement.origin_town_name,                 inline: true },
+                        { name: "\u200b",        value: "\u200b",                                  inline: true },
+                        { name: "⏳ Départ",    value: dts(movement.started_at),                  inline: true },
+                        { name: "🎯 Arrivée",   value: `${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`, inline: true },
+                        { name: "\u200b",        value: "\u200b",                                  inline: true },
+                    ],
+                    footer: { text: `🔍 Détecté par ${uw.Game?.player_name || "?"}` },
+                    timestamp: new Date().toISOString(),
+                };
+
+                let hook;
+                const SUPPORT_TYPES = ["support", "portal_support_olympus"];
+                if (SUPPORT_TYPES.includes(movement.type)) {
+                    // Routing soutien : allié si la ville d'origine est connue et alliée, sinon canal attaque
+                    const senderAllianceId = getSenderAllianceIdFromMap(movement.origin_town_id);
+                    const isAllied = senderAllianceId && ALLIANCE_LABEL_BY_ID[senderAllianceId];
+                    hook = isAllied ? hooks.support : hooks.attack;
+                } else {
+                    hook = hooks.attack;
+                }
+                await sendToDiscord(hook, embed, ping);
+
+            } catch (e) {
+                console.warn("[GTN] movement error", movement.id, e);
+            }
+        }
+    }
+
+    console.log("[GTN] scan finished ✅");
 }
-
 
 async function fetchTempleData(templeId) {
     const payload = {
@@ -221,12 +428,9 @@ async function fetchTempleData(templeId) {
 
     var result = undefined;
     await gpAjax.ajaxGet("frontend_bridge", "execute", payload, !0, {
-        success: function (da, U) {
-            result = U;
-        },
+        success: function (da, U) { result = U; },
         error: function (da, U) {
-            console.error(da);
-            console.error(U);
+            console.error("[GTN] fetchTempleData error", da, U);
         },
     });
 
@@ -235,23 +439,16 @@ async function fetchTempleData(templeId) {
 
 async function fetchTempleCommands() {
     const payload = {
-        types: [
-            {
-                type: "backbone",
-            },
-        ],
+        types: [{ type: "backbone" }],
         town_id: Game.townId,
         nl_init: false,
     };
 
     var result = undefined;
     await gpAjax.ajaxPost("game/data", "get", payload, !0, {
-        success: function (da, U) {
-            result = U;
-        },
+        success: function (da, U) { result = U; },
         error: function (da, U) {
-            console.error(da);
-            console.error(U);
+            console.error("[GTN] fetchTempleCommands error", da, U);
         },
     });
 
@@ -263,136 +460,99 @@ async function fetchTempleCommands() {
 async function createTempleMovement(movementId, templeId, user, town, type, startedAt, arrivalAt) {
     const url = `${BASE_URL}/api/temple/movement/add`;
 
-    const payload = {
-        movementId,
-        templeId,
-        user,
-        town,
-        type,
-        startedAt,
-        arrivalAt,
-    };
-
     const response = await fetch(url, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movementId, templeId, user, town, type, startedAt, arrivalAt }),
     });
 
     if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.statusText}`);
+        throw new Error(`Vercel error: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();
 }
 
-async function sendToDiscord(webhookUrl, message) {
+async function sendToDiscord(webhookUrl, embed, ping = null) {
     const response = await fetch(webhookUrl, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            user: "Grepolis Temple Notifier",
-            content: message,
+            username: "Grepolis Temple Notifier",
+            content: ping || "",
+            embeds: [embed],
         }),
     });
 
     if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.statusText}`);
+        const text = await response.text();
+        throw new Error(`Discord error: ${response.status} ${response.statusText} — ${text}`);
     }
 
-    return await response.json();
+    return true;
 }
 
 function createSettingsWindow() {
-    var windowExists = false;
-    var windowItem = null;
+    var wnd = null;
     for (let item of document.getElementsByClassName("ui-dialog-title")) {
-        if (item.innerHTML == language.settings.title) {
-            windowExists = true;
-            windowItem = item;
+        if (item.innerHTML === language.settings.title) {
+            wnd = item.parentElement?.parentElement;
+            break;
         }
     }
-    if (!windowExists) {
-        var wnd = Layout.wnd.Create(
-            Layout.wnd.TYPE_DIALOG,
-            language.settings.title
-        );
+
+    if (!wnd) {
+        wnd = Layout.wnd.Create(Layout.wnd.TYPE_DIALOG, language.settings.title);
     }
 
     wnd.setContent("");
+
+    var windowItem = null;
     for (let item of document.getElementsByClassName("ui-dialog-title")) {
-        if (item.innerHTML == language.settings.title) {
+        if (item.innerHTML === language.settings.title) {
             windowItem = item;
+            break;
         }
     }
 
     wnd.setHeight(document.body.scrollHeight / 2 + 100);
     wnd.setWidth("800");
     wnd.setTitle(language.settings.title);
-    var title = windowItem;
-    var frame = title.parentElement.parentElement.children[1].children[4];
+
+    var frame = windowItem.parentElement.parentElement.children[1].children[4];
     frame.innerHTML = "";
+
     var html = document.createElement("html");
     var body = document.createElement("div");
     var head = document.createElement("head");
-    element = document.createElement("h3");
+
+    var element = document.createElement("h3");
     element.innerHTML = language.settings.settings;
     body.appendChild(element);
+
     var list = document.createElement("ul");
     list.style = "overflow-y: scroll;overflow-x: hidden;";
     list.style.height = document.body.scrollHeight / 2 - 100 + "px";
     list.style.paddingBottom = "5px";
 
-    createSettingsCheckbox(
-        list,
-        settings.send_support_message,
-        "setting_send_support_message",
-        language.settings.send_support_message
-    );
-    createSettingsCheckbox(
-        list,
-        settings.send_attack_message,
-        "setting_send_attack_message",
-        language.settings.send_attack_message
-    );
+    createSettingsCheckbox(list, settings.send_support_message, "setting_send_support_message", language.settings.send_support_message);
+    createSettingsCheckbox(list, settings.send_attack_message, "setting_send_attack_message", language.settings.send_attack_message);
     list.appendChild(document.createElement("hr"));
 
     createSettingsTextblock(list, language.settings.discord_support_hook);
-    createSettingsTextbox(
-        list,
-        settings.discord_support_hook,
-        "setting_discord_support_hook",
-        400
-    );
+    createSettingsTextbox(list, settings.discord_support_hook, "setting_discord_support_hook", 400);
     createSettingsTextblock(list, language.settings.discord_attack_hook);
-    createSettingsTextbox(
-        list,
-        settings.discord_attack_hook,
-        "setting_discord_attack_hook",
-        400
-    );
+    createSettingsTextbox(list, settings.discord_attack_hook, "setting_discord_attack_hook", 400);
     list.appendChild(document.createElement("hr"));
 
     createSettingsTextblock(list, language.settings.monitor_timeout);
-    createSettingsTextbox(
-        list,
-        settings.monitor_timeout,
-        "setting_monitor_timeout",
-        400,
-        "number"
-    );
+    createSettingsTextbox(list, settings.monitor_timeout, "setting_monitor_timeout", 400, "number");
     list.appendChild(document.createElement("hr"));
 
     var element = document.createElement("p");
-    element.innerHTML = "Grepolis Map Enhancer v." + GM_info.script.version;
+    element.innerHTML = "Grepolis Temple Notifier v." + GM_info.script.version;
     element.innerHTML += "<br>" + language.settings.credits;
-    element.innerHTML +=
-        '<br><p style="font-size: xx-small">contact: <a href="mailto:contact@joswigchert.nl">contact@joswigchert.nl</a> - web: <a href="https://gme.cyllos.dev" tagert="_blank">nogniks.com</a> - <a href="https://gme.cyllos.dev/GrepolisMapEnhancer.user.js" target="_blank">update</a></p>';
-
+    element.innerHTML += '<br><p style="font-size: xx-small">contact: <a href="mailto:contact@joswigchert.nl">contact@joswigchert.nl</a></p>';
     element.style.position = "absolute";
     element.style.bottom = "0";
     element.style.left = "0";
@@ -400,26 +560,20 @@ function createSettingsWindow() {
     element.style.lineHeight = "1";
     list.appendChild(element);
 
-    var savebutton = createSettingsButton("settings_reload", language.settings.save_reload); savebutton.style.position = 'absolute'; savebutton.style.bottom = "0"; savebutton.style.right = "0";
+    var savebutton = createSettingsButton("settings_reload", language.settings.save_reload);
+    savebutton.style.position = "absolute";
+    savebutton.style.bottom = "0";
+    savebutton.style.right = "0";
     body.appendChild(savebutton);
-
     body.appendChild(list);
 
     html.appendChild(head);
     html.appendChild(body);
     frame.appendChild(html);
 
-    $('.gtncheckbox').on('click', function () {
-        swapCheckboxValue(this);
-    });
-
-    $('.gtntextbox').on('change', function () {
-        setTextboxValue(this);
-    });
-
-    $('#settings_reload').on('click', function () {
-        window.location.reload();
-    });
+    $(".gtncheckbox").on("click", function () { swapCheckboxValue(this); });
+    $(".gtntextbox").on("change", function () { setTextboxValue(this); });
+    $("#settings_reload").on("click", function () { window.location.reload(); });
 
     addMeta("GTNSettings", "ready", "true");
 }
@@ -430,21 +584,26 @@ function addMeta(metaName, attributeName, value) {
     var metaValue = document.createAttribute(attributeName);
     metaValue.value = value;
     metaTag.attributes.setNamedItem(metaValue);
-
     $("head").prepend(metaTag);
 }
 
 function swapCheckboxValue(element) {
     $("#" + element.id).toggleClass("checked");
-    settings[element.id] = $(element).hasClass("checked");
-    console.log("Setting " + element.id + " to " + $(element).hasClass("checked"));
-    GM_setValue(element.id, $(element).hasClass("checked"));
+    const checked = $(element).hasClass("checked");
+    const key = element.id.replace(/^setting_/, "");
+    settings[key] = checked;
+    GM_setValue(element.id, checked);
 }
 
 function setTextboxValue(element) {
-    settings[element.id] = $(element).val();
-    console.log("Setting " + element.id + " to " + $(element).val());
-    GM_setValue(element.id, $(element).val());
+    let val = $(element).val();
+    const key = element.id.replace(/^setting_/, "");
+    if (key === "monitor_timeout") {
+        val = Math.max(30000, Number(val) || 600000);
+        $(element).val(val);
+    }
+    settings[key] = val;
+    GM_setValue(element.id, val);
 }
 
 function createSettingsButton(id, text) {
@@ -471,49 +630,31 @@ function createSettingsCheckbox(list, value, id, description) {
     checkbox.className = "cbx_icon";
     var caption = document.createElement("div");
     caption.className = "cbx_caption";
-    var listitem = document
-        .createElement("li")
-        .appendChild(document.createElement("div"));
+    var listItem = document.createElement("li").appendChild(document.createElement("div"));
     var state = value ? "checked" : "unchecked";
-    listitem.id = id;
-    listitem.className = "gtncheckbox checkbox_new " + state;
+    listItem.id = id;
+    listItem.className = "gtncheckbox checkbox_new " + state;
     caption.innerHTML = description;
-    listitem.appendChild(checkbox);
-    listitem.appendChild(caption);
-    list.appendChild(listitem.parentElement);
+    listItem.appendChild(checkbox);
+    listItem.appendChild(caption);
+    list.appendChild(listItem.parentElement);
 }
 
 function createSettingsTextbox(list, setting, id, width, type) {
-    var listitem = document.createElement("div");
-    listitem.className = "textbox";
-    listitem.style.width = width + "px";
+    var listItem = document.createElement("div");
+    listItem.className = "textbox";
+    listItem.style.width = width + "px";
     if (setting == null) setting = "";
-    listitem.innerHTML =
+    listItem.innerHTML =
         '<div class="left"></div><div class="right"></div><div class="middle"><div class="ie7fix"><input tabindex="1" id="' +
-        id +
-        '" class="gtntextbox" value="' +
-        setting +
-        '" ' + (type ? 'type="' + type + '"' : '') +
+        id + '" class="gtntextbox" value="' + setting + '" ' +
+        (type ? 'type="' + type + '"' : '') +
         ' size="10" type="text"></div></div>';
-    list.appendChild(listitem);
+    list.appendChild(listItem);
 }
 
 function createSettingsTextblock(list, description) {
     var p = document.createElement("p");
     p.innerHTML = description;
     list.appendChild(p);
-}
-
-function maakKleurKiezer(list, setting, id, width) {
-    var listitem = document.createElement("div");
-    listitem.className = "color";
-    listitem.style.width = width + "px";
-    if (setting == null) setting = "";
-    listitem.innerHTML =
-        '<div class="left"></div><div class="right"></div><div class="middle"><div class="ie7fix"><input tabindex="1" class="kleurKiezer" id="' +
-        id +
-        '" value="' +
-        setting +
-        '" type="color"></div></div>';
-    list.appendChild(listitem);
 }

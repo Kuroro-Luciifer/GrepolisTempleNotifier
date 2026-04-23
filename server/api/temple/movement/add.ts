@@ -3,25 +3,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export default defineEventHandler(async (event) => {
-    const origin = getHeader(event, "origin") || "";
-
-    // Autoriser tous les mondes Grepolis FR (ex: fr176.grepolis.com)
-    const isGrepolis = /^https:\/\/fr\d+\.grepolis\.com$/i.test(origin);
-
-    if (isGrepolis) {
-        setHeader(event, "Access-Control-Allow-Origin", origin);
-        setHeader(event, "Vary", "Origin");
-        setHeader(event, "Access-Control-Allow-Credentials", "true"); // garde seulement si tu en as besoin
-    }
-
-    setHeader(event, "Access-Control-Allow-Methods", "POST, OPTIONS");
-    setHeader(event, "Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-    if (event.method === "OPTIONS") {
-        event.node.res.statusCode = 204;
-        return "";
-    }
-
     const body = await readBody(event)
 
     if (!body.movementId) {
