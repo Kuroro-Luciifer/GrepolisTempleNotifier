@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Grepolis Temple Notifier
 // @namespace    http://tampermonkey.net/
-// @version      2026.1.3
+// @version      2026.1.4
 // @description  Monitors the incoming support and attacks on temples
 // @author       Jos
 // @match        http://*.grepolis.com/game/*
@@ -259,7 +259,7 @@ async function monitor() {
     }
 }
 
-function dts(ts) { return ts ? `<t:${ts}:t>` : "?"; }
+function dts(ts) { return ts ? `<t:${ts}:T>` : "?"; }
 function drel(ts) { return ts ? `<t:${ts}:R>` : "?"; }
 
 async function getTempleMovements() {
@@ -355,8 +355,8 @@ async function getTempleMovements() {
                         { name: "🦶 Alliance", value: `**${allyLabel}**`,                       inline: true },
                         { name: "👤 Joueur",   value: movement.sender_name || "Inconnu",        inline: true },
                         { name: "📍 Origine",  value: movement.origin_town_name || "Inconnu",   inline: true },
-                        { name: "⏳ Départ",   value: dts(movement.started_at),                 inline: true },
-                        { name: "🎯 Arrivée",  value: `${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`, inline: true },
+                        { name: "⏳ Départ",   value: `${dts(movement.started_at)} (${drel(movement.started_at)})`,   inline: true },
+                        { name: "🎯 Arrivée",  value: `${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`,  inline: true },
                     ],
                     footer: { text: `🔍 Détecté par ${uw.Game?.player_name || "?"}` },
                     timestamp: new Date().toISOString(),
