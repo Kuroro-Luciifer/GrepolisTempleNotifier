@@ -1,7 +1,7 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name         Grepolis Temple Notifier
 // @namespace    http://tampermonkey.net/
-// @version      2025.1.1
+// @version      2026.1.3
 // @description  Monitors the incoming support and attacks on temples
 // @author       Jos
 // @match        http://*.grepolis.com/game/*
@@ -53,19 +53,19 @@ const language = {
 // ======================================
 
 /*******************************************************************************************************************************
- * ALLIANCE MAPPING
+ * ALLIANCE MAPPING — labels + webhooks par alliance du joueur courant
  *******************************************************************************************************************************/
 
 const ALLIANCE_LABEL_BY_ID = {
     239: "[REPROD] LES PANARDS DE KAPRE",
-    19: "[OFF TER] LES PETONS DE UKNOW",
+    19:  "[OFF TER] LES PETONS DE UKNOW",
     335: "[OFF NAV] LES RIPATONS DE POPPY",
     595: "[DEF] LES FODDERS D'OMBRINETTE",
     594: "[PORTAIL] LES TROADS DE TARA",
     690: "[RES] LES PIEDS DE MILO"
 };
 
-function getAllianceLabelHardcoded(id) {
+function getAllianceLabel(id) {
     if (!id) return "Sans alliance";
     return ALLIANCE_LABEL_BY_ID[id] || `Alliance #${id}`;
 }
@@ -134,12 +134,10 @@ function markMovementSeen(movementId) {
     const now = Math.floor(Date.now() / 1000);
     cache[String(movementId)] = now;
 
-    // Purge des entrées expirées
     for (const id of Object.keys(cache)) {
         if (now - cache[id] >= SEEN_TTL_SECONDS) delete cache[id];
     }
 
-    // Garde les 1000 plus récents si le cache déborde
     const keys = Object.keys(cache);
     if (keys.length > 1000) {
         keys.sort((a, b) => cache[a] - cache[b]);
@@ -149,25 +147,6 @@ function markMovementSeen(movementId) {
     GM_setValue("gtn_seen_movements", JSON.stringify(cache));
 }
 
-/*******************************************************************************************************************************
- * Détection alliance via ITowns uniquement (pas d'appel API asynchrone)
- * Retourne l'alliance_id de la ville d'origine si disponible dans la carte, sinon null.
- *******************************************************************************************************************************/
-
-function getSenderAllianceIdFromMap(townId) {
-    if (!townId || !uw.ITowns) return null;
-    try {
-        const town = typeof uw.ITowns.get === 'function'
-            ? uw.ITowns.get(townId)
-            : uw.ITowns[townId];
-        if (!town) return null;
-        return (typeof town.get === 'function' ? town.get('alliance_id') : town.alliance_id) ?? null;
-    } catch (e) {
-        return null;
-    }
-}
-
-// Debug helpers — accessibles via GTN.xxx() dans la console du navigateur
 unsafeWindow.GTN = {
     cache:       () => JSON.parse(GM_getValue("gtn_seen_movements", "{}")),
     clearCache:  () => { GM_setValue("gtn_seen_movements", "{}"); console.log("[GTN] cache vidé"); },
@@ -178,12 +157,12 @@ unsafeWindow.GTN = {
         GM_setValue("gtn_seen_movements", JSON.stringify(c));
         console.log("[GTN] expiré :", id || "tous");
     },
-    forceScan:   async () => {
+    forceScan: async () => {
         if (isScanning) { console.log("[GTN] scan déjà en cours"); return; }
         isScanning = true;
         try { await getTempleMovements(); } catch(e) { console.error(e); } finally { isScanning = false; }
     },
-    settings:    () => settings,
+    settings: () => settings,
 };
 console.log("[GTN] GTN helpers dispo → GTN.cache() / GTN.clearCache() / GTN.forceExpire(id) / GTN.forceScan() / GTN.settings()");
 
@@ -295,7 +274,6 @@ async function getTempleMovements() {
         return;
     }
 
-    // Fetch toutes les données de temples en parallèle
     const templeDataList = await Promise.all(
         activeTemples.map(cmd => fetchTempleData(cmd.temple_id))
     );
@@ -303,109 +281,88 @@ async function getTempleMovements() {
     console.log(`[GTN] ${activeTemples.length} temples actifs fetchés`);
 
     const hooks = getHooksForCurrentAlliance();
-    const allyLabel = getAllianceLabelHardcoded(uw.Game?.alliance_id);
+    const allyLabel = getAllianceLabel(uw.Game?.alliance_id);
 
     for (let i = 0; i < activeTemples.length; i++) {
         const command = activeTemples[i];
         const movements = templeDataList[i]?.movements || [];
 
         for (const movement of movements) {
-            // Cache local : évite l'appel Vercel si déjà traité
             if (isMovementSeen(movement.id)) continue;
 
+            const isSupportType = ["support", "portal_support_olympus"].includes(movement.type);
+
+            if (isSupportType && !settings.send_support_message) {
+                markMovementSeen(movement.id);
+                continue;
+            }
+            if (!isSupportType && !settings.send_attack_message) {
+                markMovementSeen(movement.id);
+                continue;
+            }
+
             console.log(`[GTN] nouveau mvt ${movement.id} | type=${movement.type} | sender=${movement.sender_name}`);
-
-            // Filtre attaques alliées : skip si la ville d'origine est connue et alliée (données map uniquement)
-            const ATTACK_TYPES = ["attack_sea", "attack_land", "attack_takeover"];
-            if (ATTACK_TYPES.includes(movement.type) && movement.origin_town_id) {
-                const senderAllianceId = getSenderAllianceIdFromMap(movement.origin_town_id);
-                if (senderAllianceId && ALLIANCE_LABEL_BY_ID[senderAllianceId]) {
-                    markMovementSeen(movement.id);
-                    console.log(`[GTN] skip attaque alliée — ${movement.sender_name} (${ALLIANCE_LABEL_BY_ID[senderAllianceId]})`);
-                    continue;
-                }
-            }
-
-            if (movement.type === "support" && !settings.send_support_message) {
-                markMovementSeen(movement.id);
-                continue;
-            }
-            if (movement.type !== "support" && !settings.send_attack_message) {
-                markMovementSeen(movement.id);
-                continue;
-            }
 
             try {
                 console.log(`[GTN] → Vercel mvt ${movement.id}`);
                 const data = await createTempleMovement(
                     movement.id,
                     command.temple_id,
-                    movement.sender_name,
-                    movement.origin_town_name,
+                    movement.sender_name || "Inconnu",
+                    movement.origin_town_name || "Inconnu",
                     movement.type,
                     movement.started_at,
                     movement.arrival_at
                 );
 
                 console.log(`[GTN] ← Vercel mvt ${movement.id} success=${data?.success}`);
-                // Marquer comme vu côté client même si Vercel dit "déjà connu"
                 markMovementSeen(movement.id);
 
                 if (!data?.success) continue;
 
                 const typeLabel =
-                    movement.type === "support"         ? "SOUTIEN" :
-                        movement.type === "attack_sea"      ? "OFF NAV" :
-                            movement.type === "attack_takeover" ? "BC" :
-                                movement.type === "attack_land"     ? "UMV" :
-                                    "MOUVEMENT";
+                    movement.type === "support"                ? "SOUTIEN" :
+                    movement.type === "portal_support_olympus" ? "SOUTIEN PORTAIL" :
+                    movement.type === "attack_sea"             ? "OFF NAV" :
+                    movement.type === "attack_takeover"        ? "BC" :
+                    movement.type === "attack_land"            ? "UMV" :
+                    "MOUVEMENT";
 
                 const typeEmoji =
-                    movement.type === "support"         ? "🛡️" :
-                        movement.type === "attack_sea"      ? "⚓" :
-                            movement.type === "attack_takeover" ? "👑" :
-                                movement.type === "attack_land"     ? "⚔️" :
-                                    "🔵";
+                    isSupportType                              ? "🛡️" :
+                    movement.type === "attack_sea"             ? "⚓" :
+                    movement.type === "attack_takeover"        ? "👑" :
+                    movement.type === "attack_land"            ? "⚔️" :
+                    "🔵";
 
                 const color =
-                    movement.type === "support"         ? 0x2ECC71 :  // vert
-                        movement.type === "attack_takeover" ? 0xE74C3C :  // rouge vif
-                            movement.type === "attack_land"     ? 0xE67E22 :  // orange
-                                movement.type === "attack_sea"      ? 0x3498DB :  // bleu
-                                    0x95A5A6;
+                    movement.type === "support"                ? 0x2ECC71 :
+                    movement.type === "portal_support_olympus" ? 0x3498DB :
+                    movement.type === "attack_sea"             ? 0xE74C3C :
+                    movement.type === "attack_land"            ? 0xFF69B4 :
+                    movement.type === "attack_takeover"        ? 0xF1C40F :
+                    0x95A5A6;
 
                 const ping =
                     movement.type === "attack_takeover" ? "@everyone" :
-                        movement.type === "attack_land"     ? "@here" : null;
+                    movement.type === "attack_land"     ? "@here" : null;
 
                 const embed = {
-                    title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name}`,
+                    title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name || "Temple"}`,
                     color: color,
                     fields: [
-                        { name: "🏛️ Temple",    value: `[temple]${command.temple_id}[/temple]`,  inline: true },
-                        { name: "🦶 Alliance",  value: allyLabel,                                 inline: true },
-                        { name: "\u200b",        value: "\u200b",                                  inline: true },
-                        { name: "👤 Joueur",    value: movement.sender_name,                      inline: true },
-                        { name: "📍 Origine",   value: movement.origin_town_name,                 inline: true },
-                        { name: "\u200b",        value: "\u200b",                                  inline: true },
-                        { name: "⏳ Départ",    value: dts(movement.started_at),                  inline: true },
-                        { name: "🎯 Arrivée",   value: `${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`, inline: true },
-                        { name: "\u200b",        value: "\u200b",                                  inline: true },
+                        { name: "🏛️ Temple",   value: `[temple]${command.temple_id}[/temple]`,  inline: true },
+                        { name: "🦶 Alliance", value: `**${allyLabel}**`,                       inline: true },
+                        { name: "👤 Joueur",   value: movement.sender_name || "Inconnu",        inline: true },
+                        { name: "📍 Origine",  value: movement.origin_town_name || "Inconnu",   inline: true },
+                        { name: "⏳ Départ",   value: dts(movement.started_at),                 inline: true },
+                        { name: "🎯 Arrivée",  value: `${dts(movement.arrival_at)} (${drel(movement.arrival_at)})`, inline: true },
                     ],
                     footer: { text: `🔍 Détecté par ${uw.Game?.player_name || "?"}` },
                     timestamp: new Date().toISOString(),
                 };
 
-                let hook;
-                const SUPPORT_TYPES = ["support", "portal_support_olympus"];
-                if (SUPPORT_TYPES.includes(movement.type)) {
-                    // Routing soutien : allié si la ville d'origine est connue et alliée, sinon canal attaque
-                    const senderAllianceId = getSenderAllianceIdFromMap(movement.origin_town_id);
-                    const isAllied = senderAllianceId && ALLIANCE_LABEL_BY_ID[senderAllianceId];
-                    hook = isAllied ? hooks.support : hooks.attack;
-                } else {
-                    hook = hooks.attack;
-                }
+                const hook = isSupportType ? hooks.support : hooks.attack;
                 await sendToDiscord(hook, embed, ping);
 
             } catch (e) {
@@ -421,17 +378,13 @@ async function fetchTempleData(templeId) {
     const payload = {
         action_name: "read",
         model_url: "TempleInfo",
-        arguments: {
-            target_id: templeId,
-        },
+        arguments: { target_id: templeId },
     };
 
     var result = undefined;
     await gpAjax.ajaxGet("frontend_bridge", "execute", payload, !0, {
         success: function (da, U) { result = U; },
-        error: function (da, U) {
-            console.error("[GTN] fetchTempleData error", da, U);
-        },
+        error: function (da, U) { console.error("[GTN] fetchTempleData error", da, U); },
     });
 
     return result;
@@ -447,9 +400,7 @@ async function fetchTempleCommands() {
     var result = undefined;
     await gpAjax.ajaxPost("game/data", "get", payload, !0, {
         success: function (da, U) { result = U; },
-        error: function (da, U) {
-            console.error("[GTN] fetchTempleCommands error", da, U);
-        },
+        error: function (da, U) { console.error("[GTN] fetchTempleCommands error", da, U); },
     });
 
     return result.backbone.collections
