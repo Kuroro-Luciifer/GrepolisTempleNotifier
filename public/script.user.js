@@ -351,9 +351,8 @@ async function getTempleMovements() {
                     0x95A5A6;
 
                 const ping =
-                    movement.type === "attack_takeover"       ? "@everyone" :
-                    movement.type === "attack_land"           ? "@here" :
-                    movement.type === "portal_attack_olympus" ? "@here" : null;
+                    movement.type === "attack_takeover" ? "@everyone" :
+                    movement.type === "attack_land"     ? "@here" : null;
 
                 const embed = {
                     title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name || "Temple"}`,
