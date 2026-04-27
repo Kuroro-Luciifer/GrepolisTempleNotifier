@@ -36,7 +36,7 @@ const settings = {
     send_attack_message: true,
     discord_support_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
     discord_attack_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
-    monitor_timeout: 600000,
+    monitor_timeout: 300000,
 };
 
 const language = {
@@ -47,7 +47,7 @@ const language = {
         send_attack_message: "Send attack message to Discord",
         discord_support_hook: "Discord webhook URL for support messages",
         discord_attack_hook: "Discord webhook URL for attack messages",
-        monitor_timeout: "Intervalle de scan en millisecondes (min 30000 = 30s)",
+        monitor_timeout: "Intervalle de scan en millisecondes (min 30000 = 30s, par défaut 300000 = 5min)",
         save_reload: "Save and reload",
         credits:
             "Made by Jos, please contact me with suggestions or bugs and to add support for your language.",
