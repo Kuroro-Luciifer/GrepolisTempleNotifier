@@ -27,6 +27,9 @@ var $ = uw.jQuery;
 
 const BASE_URL = "https://kuroros-projects.vercel.app";
 
+const OLYMPUS_HOOK = "https://discord.com/api/webhooks/1498410507542069270/IU_pHdKG-AjKctUuHeEKfdI5v0dwQqFfaXpLomaNCM0e_hs7BARCBr0EihEdCs4lVSSM";
+const SUPPORT_HOOK  = "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr";
+
 // ======================================
 const settings = {
     send_support_message: true,
@@ -323,13 +326,16 @@ async function getTempleMovements() {
                 const typeLabel =
                     movement.type === "support"                ? "SOUTIEN" :
                     movement.type === "portal_support_olympus" ? "SOUTIEN PORTAIL" :
+                    movement.type === "portal_attack_olympus"  ? "ATT PORTAIL" :
                     movement.type === "attack_sea"             ? "OFF NAV" :
                     movement.type === "attack_takeover"        ? "BC" :
                     movement.type === "attack_land"            ? "UMV" :
                     "MOUVEMENT";
 
                 const typeEmoji =
-                    isSupportType                              ? "🛡️" :
+                    movement.type === "support"                ? "🛡️" :
+                    movement.type === "portal_support_olympus" ? "🔵" :
+                    movement.type === "portal_attack_olympus"  ? "⚡" :
                     movement.type === "attack_sea"             ? "⚓" :
                     movement.type === "attack_takeover"        ? "👑" :
                     movement.type === "attack_land"            ? "⚔️" :
@@ -338,14 +344,16 @@ async function getTempleMovements() {
                 const color =
                     movement.type === "support"                ? 0x2ECC71 :
                     movement.type === "portal_support_olympus" ? 0x3498DB :
+                    movement.type === "portal_attack_olympus"  ? 0xE74C3C :
                     movement.type === "attack_sea"             ? 0xE74C3C :
                     movement.type === "attack_land"            ? 0xFF69B4 :
                     movement.type === "attack_takeover"        ? 0xF1C40F :
                     0x95A5A6;
 
                 const ping =
-                    movement.type === "attack_takeover" ? "@everyone" :
-                    movement.type === "attack_land"     ? "@here" : null;
+                    movement.type === "attack_takeover"       ? "@everyone" :
+                    movement.type === "attack_land"           ? "@here" :
+                    movement.type === "portal_attack_olympus" ? "@here" : null;
 
                 const embed = {
                     title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name || "Temple"}`,
@@ -362,7 +370,8 @@ async function getTempleMovements() {
                     timestamp: new Date().toISOString(),
                 };
 
-                const hook = isSupportType ? hooks.support : hooks.attack;
+                const isPortalType = movement.type === "portal_support_olympus" || movement.type === "portal_attack_olympus";
+                const hook = isPortalType ? OLYMPUS_HOOK : (isSupportType ? SUPPORT_HOOK : hooks.attack);
                 await sendToDiscord(hook, embed, ping);
 
             } catch (e) {
