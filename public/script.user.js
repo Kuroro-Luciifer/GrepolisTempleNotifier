@@ -9,9 +9,9 @@
 // @exclude      view-source://*
 // @exclude      https://classic.grepolis.com/game/*
 // @icon         https://cdn-icons-png.flaticon.com/512/3874/3874511.png
-// @updateURL    https://kuroros-projects.vercel.app/script.meta.js
-// @downloadURL  https://kuroros-projects.vercel.app/script.user.js
-// @homepage     https://kuroros-projects.vercel.app
+// @updateURL    https://grepolis-temple-notifier-nine.vercel.app/script.meta.js
+// @downloadURL  https://grepolis-temple-notifier-nine.vercel.app/script.user.js
+// @homepage     https://grepolis-temple-notifier-nine.vercel.app
 // @grant		 GM_getValue
 // @grant		 GM_setValue
 // @grant        unsafeWindow
@@ -25,7 +25,7 @@
 var uw = unsafeWindow || window;
 var $ = uw.jQuery;
 
-const BASE_URL = "https://kuroros-projects.vercel.app";
+const BASE_URL = "https://grepolis-temple-notifier-nine.vercel.app";
 
 let OLYMPUS_HOOK = null;
 let SUPPORT_HOOK = null;
