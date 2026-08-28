@@ -27,15 +27,15 @@ var $ = uw.jQuery;
 
 const BASE_URL = "https://kuroros-projects.vercel.app";
 
-const OLYMPUS_HOOK = "TODO_WEBHOOK_OLYMPUS";
-const SUPPORT_HOOK  = "TODO_WEBHOOK_SUPPORT";
+let OLYMPUS_HOOK = null;
+let SUPPORT_HOOK = null;
 
 // ======================================
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "TODO_WEBHOOK_SUPPORT",
-    discord_attack_hook: "TODO_WEBHOOK_ATTACK",
+    discord_support_hook: "",
+    discord_attack_hook: "",
     monitor_timeout: 300000,
 };
 
@@ -73,36 +73,11 @@ function getAllianceLabel(id) {
     return ALLIANCE_LABEL_BY_ID[id] || `Alliance #${id}`;
 }
 
-const HOOKS_BY_ALLIANCE_ID = {
-    420: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_REPROD",
-    },
-    121: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_OFF_TER",
-    },
-    856: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_OFF_NAV",
-    },
-    833: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_DEF",
-    },
-    209: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_PORTAIL1",
-    },
-    118: {
-        support: "TODO_WEBHOOK_SUPPORT",
-        attack:  "TODO_WEBHOOK_ATTACK_PORTAIL2",
-    }
-};
+let HOOKS_BY_ALLIANCE_ID = {};
 
 const DEFAULT_HOOKS = {
-    support: "TODO_WEBHOOK_SUPPORT",
-    attack:  "TODO_WEBHOOK_ATTACK",
+    support: null,
+    attack:  null,
 };
 
 function getHooksForCurrentAlliance() {
@@ -114,11 +89,7 @@ function getHooksForCurrentAlliance() {
  * WHITELIST — joueurs dont les mouvements ne déclenchent PAS de notification
  *******************************************************************************************************************************/
 
-const WHITELISTED_PLAYERS = [
-    // Ajouter ici les pseudos exacts des joueurs alliés à ignorer
-    // "PseudoJoueur1",
-    // "PseudoJoueur2",
-];
+let WHITELISTED_PLAYERS = [];
 
 function isPlayerWhitelisted(playerName) {
     return WHITELISTED_PLAYERS.some(
@@ -189,7 +160,23 @@ console.log("[GTN] GTN helpers dispo → GTN.cache() / GTN.clearCache() / GTN.fo
  * Main
  *******************************************************************************************************************************/
 
-(function () {
+async function loadConfig() {
+    try {
+        const response = await fetch(`${BASE_URL}/api/config`);
+        if (!response.ok) throw new Error(`Config error: ${response.status}`);
+        const config = await response.json();
+
+        OLYMPUS_HOOK = config.olympusHook || null;
+        HOOKS_BY_ALLIANCE_ID = config.hooksByAlliance || {};
+        WHITELISTED_PLAYERS = config.whitelistedPlayers || [];
+
+        console.log("[GTN] config loaded ✅", { alliances: Object.keys(HOOKS_BY_ALLIANCE_ID).length, whitelist: WHITELISTED_PLAYERS.length });
+    } catch (e) {
+        console.error("[GTN] failed to load config:", e);
+    }
+}
+
+(async function () {
     "use strict";
     console.log(
         "%c|= " +
@@ -206,6 +193,7 @@ console.log("[GTN] GTN helpers dispo → GTN.cache() / GTN.clearCache() / GTN.fo
 
     addSettingsButton();
     loadSettings();
+    await loadConfig();
 
     setTimeout(() => {
         monitor();
@@ -309,12 +297,12 @@ async function getTempleMovements() {
         for (const movement of movements) {
             if (isMovementSeen(movement.id)) continue;
 
-            if (isPlayerWhitelisted(movement.sender_name)) {
+            const isSupportType = ["support", "portal_support_olympus"].includes(movement.type);
+
+            if (isSupportType && isPlayerWhitelisted(movement.sender_name)) {
                 markMovementSeen(movement.id);
                 continue;
             }
-
-            const isSupportType = ["support", "portal_support_olympus"].includes(movement.type);
 
             if (isSupportType && !settings.send_support_message) {
                 markMovementSeen(movement.id);
@@ -372,8 +360,7 @@ async function getTempleMovements() {
                     0x95A5A6;
 
                 const ping =
-                    movement.type === "attack_takeover" ? "@everyone" :
-                    movement.type === "attack_land"     ? "@here" : null;
+                    movement.type === "attack_takeover" ? "@everyone" : null;
 
                 const embed = {
                     title: `${typeEmoji} ${typeLabel} — ${movement.destination_town_name || "Temple"}`,
@@ -391,7 +378,7 @@ async function getTempleMovements() {
                 };
 
                 const isPortalType = movement.type === "portal_support_olympus" || movement.type === "portal_attack_olympus";
-                const hook = isPortalType ? OLYMPUS_HOOK : (isSupportType ? SUPPORT_HOOK : hooks.attack);
+                const hook = isPortalType ? OLYMPUS_HOOK : (isSupportType ? (hooks.support || hooks.attack) : hooks.attack);
                 await sendToDiscord(hook, embed, ping);
 
             } catch (e) {

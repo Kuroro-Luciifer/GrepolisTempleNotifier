@@ -9,4 +9,14 @@ export default defineNuxtConfig({
     ],
   },
   css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    webhookOlympus: '',
+    webhookAttackReprod: '',
+    webhookAttackOffTer: '',
+    webhookAttackOffNav: '',
+    webhookAttackDef: '',
+    webhookAttackPortail1: '',
+    webhookAttackPortail2: '',
+    whitelistedPlayers: '',
+  },
 })
