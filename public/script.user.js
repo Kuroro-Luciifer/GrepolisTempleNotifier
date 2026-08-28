@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Grepolis Temple Notifier
 // @namespace    http://tampermonkey.net/
-// @version      2026.1.4
+// @version      2026.2.0
 // @description  Monitors the incoming support and attacks on temples
 // @author       Jos
 // @match        http://*.grepolis.com/game/*
@@ -27,15 +27,15 @@ var $ = uw.jQuery;
 
 const BASE_URL = "https://kuroros-projects.vercel.app";
 
-const OLYMPUS_HOOK = "https://discord.com/api/webhooks/1498410507542069270/IU_pHdKG-AjKctUuHeEKfdI5v0dwQqFfaXpLomaNCM0e_hs7BARCBr0EihEdCs4lVSSM";
-const SUPPORT_HOOK  = "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr";
+const OLYMPUS_HOOK = "TODO_WEBHOOK_OLYMPUS";
+const SUPPORT_HOOK  = "TODO_WEBHOOK_SUPPORT";
 
 // ======================================
 const settings = {
     send_support_message: true,
     send_attack_message: true,
-    discord_support_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
-    discord_attack_hook: "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
+    discord_support_hook: "TODO_WEBHOOK_SUPPORT",
+    discord_attack_hook: "TODO_WEBHOOK_ATTACK",
     monitor_timeout: 300000,
 };
 
@@ -60,12 +60,12 @@ const language = {
  *******************************************************************************************************************************/
 
 const ALLIANCE_LABEL_BY_ID = {
-    239: "[REPROD] LES PANARDS DE KAPRE",
-    19:  "[OFF TER] LES PETONS DE UKNOW",
-    335: "[OFF NAV] LES RIPATONS DE POPPY",
-    595: "[DEF] LES FODDERS D'OMBRINETTE",
-    594: "[PORTAIL] LES TROADS DE TARA",
-    690: "[RES] LES PIEDS DE MILO"
+    420: "[REPROD] Finir comme Carlos",
+    121: "[OFF TER] huit-neuf",
+    856: "[OFF NAV/LADONS] Bienveillance Max",
+    833: "[DEF] Bim Bam Boum",
+    209: "[PORTAIL 1] Bo Zinnc Supremacyx",
+    118: "[PORTAIL 2] - UNSC -"
 };
 
 function getAllianceLabel(id) {
@@ -74,40 +74,56 @@ function getAllianceLabel(id) {
 }
 
 const HOOKS_BY_ALLIANCE_ID = {
-    239: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679660960088206/q_njK5jJvOBmvax5zTZfpIFthqFo-aQHR3UT5A3b0uh1vPGPBdBlOEBQs9KBnV7QYrqM",
+    420: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_REPROD",
     },
-    19: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679685458759866/LzO8Q77t97hd70MyW4I8_1BcndyfE1G8-W185k00lLSfOXLAiYjSAlgiF5AjLGNKZN6S",
+    121: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_OFF_TER",
     },
-    335: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679710067003494/T0SzapfhCTUtLstRTZ99L0YLMszxE-yQcKDdKgMBl9rffvW7aHkR-97APvvOzzSe78m2",
+    856: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_OFF_NAV",
     },
-    595: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679728844767456/WqfWP6oKLVUpigTc-FnOGeM1EIXjEkfnwJhaqY5ZBUBMBT5S67Jm1hmZphYgYbC7p_m1",
+    833: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_DEF",
     },
-    594: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679747954151639/gkvEIy77oLwqJW86RHKUe8O_cQi8pOLMN1ht2bxvsAOp5yVm6UgjyZglvmNsi9KZW30_",
+    209: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_PORTAIL1",
     },
-    690: {
-        support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-        attack:  "https://discord.com/api/webhooks/1464679767365255274/zZ3lCZtF9PXIHY_oUKyHeG5if4wXwX1Cojcnb-YXfzk3IVbkQKWSaQ2n-31rB0OY6nV3",
+    118: {
+        support: "TODO_WEBHOOK_SUPPORT",
+        attack:  "TODO_WEBHOOK_ATTACK_PORTAIL2",
     }
 };
 
 const DEFAULT_HOOKS = {
-    support: "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
-    attack:  "https://discord.com/api/webhooks/1463235248245706925/RLJ8qnnYLTmalZ40YNCPSzqhgrJk2swMhOx43T27_RK3NxxkLT_85lD6FD85YCjxTEUr",
+    support: "TODO_WEBHOOK_SUPPORT",
+    attack:  "TODO_WEBHOOK_ATTACK",
 };
 
 function getHooksForCurrentAlliance() {
     const allianceId = uw.Game?.alliance_id;
     return HOOKS_BY_ALLIANCE_ID[allianceId] || DEFAULT_HOOKS;
+}
+
+/*******************************************************************************************************************************
+ * WHITELIST — joueurs dont les mouvements ne déclenchent PAS de notification
+ *******************************************************************************************************************************/
+
+const WHITELISTED_PLAYERS = [
+    // Ajouter ici les pseudos exacts des joueurs alliés à ignorer
+    // "PseudoJoueur1",
+    // "PseudoJoueur2",
+];
+
+function isPlayerWhitelisted(playerName) {
+    return WHITELISTED_PLAYERS.some(
+        name => name.toLowerCase() === (playerName || "").toLowerCase()
+    );
 }
 
 /*******************************************************************************************************************************
@@ -245,7 +261,7 @@ async function monitor() {
         return;
     }
 
-    if (!window.location.hostname.includes("fr176")) {
+    if (!window.location.hostname.includes("fr184")) {
         console.log("[GTN] serveur non supporté :", window.location.hostname, "→ skip");
         return;
     }
@@ -292,6 +308,11 @@ async function getTempleMovements() {
 
         for (const movement of movements) {
             if (isMovementSeen(movement.id)) continue;
+
+            if (isPlayerWhitelisted(movement.sender_name)) {
+                markMovementSeen(movement.id);
+                continue;
+            }
 
             const isSupportType = ["support", "portal_support_olympus"].includes(movement.type);
 

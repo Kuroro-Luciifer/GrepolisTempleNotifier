@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Grepolis Temple Notifier
 // @namespace    http://tampermonkey.net/
-// @version      2025.1.1
+// @version      2026.2.0
 // @description  Monitors the incoming support and attacks on temples
 // @author       Jos
 // @match        http://*.grepolis.com/game/*
